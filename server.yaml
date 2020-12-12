@@ -1,0 +1,102 @@
+admin:
+  access_log_path: /dev/null
+  address:
+    socket_address:
+      address: 127.0.0.1
+      port_value: 9000
+
+node:
+  cluster: service_greeter
+  id: test-id
+
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address: { address: 0.0.0.0, port_value: 8081 }
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.client_ssl_auth
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.client_ssl_auth.v3.ClientSSLAuth
+          stat_prefix: client_authn
+          auth_api_cluster: cert_service
+          refresh_delay: 5s
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: ["*"]
+              routes:
+              - match:
+                  prefix: "/"
+                route:
+                  cluster: service_httpbin
+            request_headers_to_add:
+            - header:
+                key: downstream_peer_fingerprint
+                value: "%DOWNSTREAM_PEER_FINGERPRINT_256%"
+          http_filters:
+          - name: envoy.filters.http.router
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: true
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain:
+                filename: certs/http_server.crt
+              private_key:
+                filename: certs/http_server.key
+            validation_context:
+              trusted_ca:
+                filename: certs/tls-ca-chain.pem
+              # crl:
+              #   filename: certs/tls-ca.crl
+              verify_certificate_spki:
+              - "jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI="                
+
+  clusters:
+  - name: service_httpbin
+    connect_timeout: 0.25s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: service_httpbin
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: www.httpbin.org
+                port_value: 80
+  - name: cert_service
+    connect_timeout: 0.25s
+    type: strict_dns
+    lb_policy: round_robin
+    load_assignment:
+      cluster_name: cert_service
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 127.0.0.1
+                port_value: 18080
+    transport_socket:
+      name: envoy.transport_sockets.tls
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
+        common_tls_context:
+          validation_context:
+            match_subject_alt_names:
+              exact: "certserver.domain.com"
+            trusted_ca:
+              filename: "certs/tls-ca-chain.pem"
+

@@ -1,0 +1,44 @@
+node:
+  cluster: cert_svc
+  id: cert-id
+
+static_resources:
+  listeners:
+  - name: listener_1
+    address:
+      socket_address: 
+        address: 0.0.0.0
+        port_value: 18080
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          codec_type: AUTO
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: direct
+              domains: ["*"]
+              routes:
+              - match:
+                  path: "/v1/certs/list/approved"
+                direct_response: 
+                   status: 200
+                   body:
+                     filename: allowed_certs.json
+          http_filters:
+          - name: envoy.filters.http.router
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: false
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain:
+                filename: certs/certserver.crt
+              private_key:
+                filename: certs/certserver.key
+
