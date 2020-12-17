@@ -4,7 +4,7 @@ Sample configuration for HTTP and Network mTLS using envoy yaml
 
 Sample demonstrates:
 
-  * 1. `client` -> `envoy_server` over mTLS
+  * 1. `client` -> `envoy_server` over mTLS, require OCSP staple
   * 2. `envoy_server` HTTP filter validates client certificate hash (`envoy.transport_sockets.tls`)
   * 3. `envoy_server` Network Filter that contacts external server for list of approved client certs (`envoy.filters.network.client_ssl_auth`)
   * 4. `envoy_server` validates client certificate against CRL (`envoy.transport_sockets.tls`)
@@ -36,7 +36,7 @@ Specifically, the following envoy constructs are used:
   [extensions.filters.network.client_ssl_auth.v3.ClientSSLAuth](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/client_ssl_auth/v3/client_ssl_auth.proto#extensions-filters-network-client-ssl-auth-v3-clientsslauth)
 
 
->> NOTE:  you can just enforce mTLS by just following steps 2 ...I added in step 3 as well just for completeness and to show a network mTLS filter.  Also, the configurations show both static client certificate validation *and* dynamic validation (eg, using CRL or calling an external system to get a list of valid certificate hashes)
+>> NOTE:  you can just enforce mTLS by just following steps 2 ...I added in step 3 as well just for completeness and to show a network mTLS filter.  Also, the configurations show both static client certificate validation *and* dynamic validation (eg, using CRL or calling an external system to get a list of valid certificate hashes).  Finally, the envoy server will respond to the clients TLS request with a stapled OCSP response which is then validated.
 
 ---
 
@@ -279,3 +279,87 @@ If you uncomment the section where the CRL is validated, and you invoke the clie
 curl: (56) OpenSSL SSL_read: error:14094414:SSL routines:ssl3_read_bytes:sslv3 alert certificate revoked, errno 0
 ```
 
+#### OCSP
+
+
+Use openssl to test the OCSP Responder:
+
+- Valid server certificate:
+```bash
+cd certs/
+openssl ocsp -index db_valid/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
+
+openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
+
+$ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -respout http_server_ocsp_resp_valid.bin
+    Response verify OK
+    http_server.crt: good
+      This Update: Dec 17 14:11:55 2020 GMT
+      Next Update: May  1 14:11:55 2022 GMT
+```
+
+- Revoked Server certificate
+
+```bash
+cd certs/
+openssl ocsp -index db_revoked/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
+
+openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
+
+$ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -respout http_server_ocsp_resp_revoked.bin
+    Response verify OK
+    http_server.crt: revoked
+      This Update: Dec 17 14:12:51 2020 GMT
+      Next Update: May  1 14:12:51 2022 GMT
+      Revocation Time: Dec 12 14:11:52 2020 GMT
+```
+
+Use curl with `--cert-status` flag
+
+```bash
+$ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.0.1  \
+    --cert certs/client.crt  \
+    --key certs/client.key  \
+    --cacert certs/tls-ca-chain.pem \
+    --cert-status \
+       https://http.domain.com:8081/get
+
+
+* Added http.domain.com:8081:127.0.0.1 to DNS cache
+* Hostname http.domain.com was found in DNS cache
+*   Trying 127.0.0.1:8081...
+* Connected to http.domain.com (127.0.0.1) port 8081 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*   CAfile: certs/tls-ca-chain.pem
+  CApath: /etc/ssl/certs
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Request CERT (13):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Certificate (11):
+* TLSv1.3 (OUT), TLS handshake, CERT verify (15):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* ALPN, server did not agree to a protocol
+* Server certificate:
+*  subject: C=US; O=Google; OU=Enterprise; CN=http.domain.com
+*  start date: Jul 10 19:29:07 2020 GMT
+*  expire date: Jul 10 19:29:07 2022 GMT
+*  subjectAltName: host "http.domain.com" matched cert's "http.domain.com"
+*  issuer: C=US; O=Google; OU=Enterprise; CN=Enterprise Subordinate CA
+*  SSL certificate verify ok.
+* SSL certificate status: good (0)                                       <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+
+> GET /get HTTP/1.1
+> Host: http.domain.com
+> User-Agent: curl/7.72.0
+> Accept: */*
+> 
+```

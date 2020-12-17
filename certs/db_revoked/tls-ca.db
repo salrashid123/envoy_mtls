@@ -1,0 +1,24 @@
+R	220425222730Z	200426003118Z	01	unknown	/C=US/O=Google/OU=Enterprise/CN=grpc.domain.com
+V	220425222938Z		02	unknown	/C=US/O=Google/OU=Enterprise/CN=barney@domain.com
+V	220426003024Z		03	unknown	/C=US/O=Google/OU=Enterprise/CN=ocsp.domain.com
+V	220609214356Z		04	unknown	/C=US/O=Google/OU=Enterprise/CN=tokenservice.esodemoapp2.com
+V	220609214628Z		05	unknown	/C=US/O=Google/OU=Enterprise/CN=tokenclienta@otherdomain.com
+V	220710192649Z		06	unknown	/C=US/O=Google/OU=Enterprise/CN=server.domain.com
+R	220710192907Z	201212141152Z	07	unknown	/C=US/O=Google/OU=Enterprise/CN=http.domain.com
+V	220710193203Z		08	unknown	/C=US/O=Google/OU=Enterprise/CN=user@domain.com
+V	220929193551Z		09	unknown	/C=US/O=Google/OU=Enterprise/CN=images.domain.com
+V	221023023724Z		0A	unknown	/C=US/O=Google/OU=Enterprise/CN=client-svc@domain.com
+V	221031180201Z		0B	unknown	/C=US/O=Google/OU=Enterprise/CN=server.domain.com
+V	221031180243Z		0C	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.domain.com
+R	221031180509Z	201212141152Z	0D	unknown	/C=US/O=Google/OU=Enterprise/CN=client@domain.com
+V	221031193759Z		0E	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.domain.com
+V	221031202215Z		0F	unknown	/C=US/O=Google/OU=Enterprise/CN=server.esodemoapp2.com
+V	221031202253Z		10	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.esodemoapp2.com
+V	221122181633Z		11	unknown	/C=US/O=Google/OU=Enterprise/CN=tls-client@domain.com
+V	221128140832Z		12	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.domain.com
+V	221212133523Z		13	unknown	/C=US/O=Google/OU=Enterprise/CN=certserver.domain.com
+V	221212163600Z		14	unknown	/C=US/O=Google/OU=Enterprise/CN=yubikey-svc@mineral-minutia-820.iam.gserviceaccount.com
+V	221212165620Z		15	unknown	/C=US/O=Google/OU=Enterprise/CN=user1@esodemoapp2.com
+V	221212171157Z		16	unknown	/C=US/O=Google/OU=Enterprise/CN=user1@esodemoapp2.com^
+V	221212174706Z		17	unknown	/C=US/O=Google/OU=Enterprise/CN=user1_esodemoapp2_com
+V	221215102629Z		18	unknown	/C=US/O=Google/OU=Enterprise/CN=user1@esodemoapp2.com
