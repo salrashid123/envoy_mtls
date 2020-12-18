@@ -10,7 +10,7 @@ V	220929193551Z		09	unknown	/C=US/O=Google/OU=Enterprise/CN=images.domain.com
 V	221023023724Z		0A	unknown	/C=US/O=Google/OU=Enterprise/CN=client-svc@domain.com
 V	221031180201Z		0B	unknown	/C=US/O=Google/OU=Enterprise/CN=server.domain.com
 V	221031180243Z		0C	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.domain.com
-R	221031180509Z	201212141152Z	0D	unknown	/C=US/O=Google/OU=Enterprise/CN=client@domain.com
+V	221031180509Z		0D	unknown	/C=US/O=Google/OU=Enterprise/CN=client@domain.com
 V	221031193759Z		0E	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.domain.com
 V	221031202215Z		0F	unknown	/C=US/O=Google/OU=Enterprise/CN=server.esodemoapp2.com
 V	221031202253Z		10	unknown	/C=US/O=Google/OU=Enterprise/CN=sts.esodemoapp2.com

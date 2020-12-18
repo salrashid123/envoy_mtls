@@ -165,6 +165,7 @@ curl -v -H "host: http.domain.com"  \
    --cert certs/client.crt \
    --key certs/client.key  \
    --cacert certs/tls-ca-chain.pem \
+   --cert-status \
      https://http.domain.com:8081/get
 ```
 
@@ -286,10 +287,10 @@ Use openssl to test the OCSP Responder:
 
 - Valid server certificate:
 ```bash
-cd certs/
-openssl ocsp -index db_valid/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
+$ cd certs/
+$ openssl ocsp -index db_valid/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
 
-openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
+$ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
 
 $ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -respout http_server_ocsp_resp_valid.bin
     Response verify OK
@@ -298,23 +299,33 @@ $ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  
       Next Update: May  1 14:11:55 2022 GMT
 ```
 
-- Revoked Server certificate
+or with openssl client/server
 
-```bash
-cd certs/
-openssl ocsp -index db_revoked/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
+```
+$ openssl s_server \
+  -status_file http_server_ocsp_resp_valid.bin \
+  -cert http_server.crt -key http_server.key \
+  -port 8081 -CAfile tls-ca-ocsp-chain.pem \
+  -verify_return_error -verify 1
 
-openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
+$ openssl s_client \
+  -connect localhost:8081 \
+  -servername http.domain.com \
+  -CAfile tls-ca-chain.pem \
+  -cert client.crt \
+  -key client.key -tls1_3 -tlsextdebug -status --verify 1
 
-$ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -respout http_server_ocsp_resp_revoked.bin
-    Response verify OK
-    http_server.crt: revoked
-      This Update: Dec 17 14:12:51 2020 GMT
-      Next Update: May  1 14:12:51 2022 GMT
-      Revocation Time: Dec 12 14:11:52 2020 GMT
+
 ```
 
-Use curl with `--cert-status` flag
+on `server.yaml`, set
+
+```yaml
+              ocsp_staple:
+                filename: certs/http_server_ocsp_resp_valid.bin
+```
+
+restart and run curl with `--cert-status` flag or via openssl to just view the OCSP stapled response
 
 ```bash
 $ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.0.1  \
@@ -362,4 +373,69 @@ $ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.
 > User-Agent: curl/7.72.0
 > Accept: */*
 > 
+```
+
+- Revoked Server certificate
+
+```bash
+cd certs/
+openssl ocsp -index db_revoked/tls-ca.db -port 9999 -rsigner ocsp.crt -rkey ocsp.key -CA tls-ca.crt -text -ndays 500
+
+openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -resp_text
+
+$ openssl ocsp -CA tls-ca.crt -CAfile tls-ca-ocsp-chain.pem -issuer tls-ca.crt  -cert http_server.crt -url http://localhost:9999 -respout http_server_ocsp_resp_revoked.bin
+    Response verify OK
+    http_server.crt: revoked
+      This Update: Dec 17 14:12:51 2020 GMT
+      Next Update: May  1 14:12:51 2022 GMT
+      Revocation Time: Dec 12 14:11:52 2020 GMT
+```
+
+on `server.yaml`,
+
+```yaml
+              ocsp_staple:
+                filename: certs/http_server_ocsp_resp_revoked.bin
+```
+
+```
+$ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.0.1    \
+    --cert certs/client.crt      --key certs/client.key   \
+    --cacert certs/tls-ca-chain.pem     --cert-status   https://http.domain.com:8081/get
+
+
+* Added http.domain.com:8081:127.0.0.1 to DNS cache
+* Hostname http.domain.com was found in DNS cache
+*   Trying 127.0.0.1:8081...
+* Connected to http.domain.com (127.0.0.1) port 8081 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* successfully set certificate verify locations:
+*   CAfile: certs/tls-ca-chain.pem
+  CApath: /etc/ssl/certs
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Request CERT (13):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Certificate (11):
+* TLSv1.3 (OUT), TLS handshake, CERT verify (15):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384
+* ALPN, server did not agree to a protocol
+* Server certificate:
+*  subject: C=US; O=Google; OU=Enterprise; CN=http.domain.com
+*  start date: Jul 10 19:29:07 2020 GMT
+*  expire date: Jul 10 19:29:07 2022 GMT
+*  subjectAltName: host "http.domain.com" matched cert's "http.domain.com"
+*  issuer: C=US; O=Google; OU=Enterprise; CN=Enterprise Subordinate CA
+*  SSL certificate verify ok.
+* SSL certificate status: revoked (1)                                <<<<<<<<<<<<<<<<<<<<<<<<<<<
+* SSL certificate revocation reason: (UNKNOWN) (-1)
+* Closing connection 0
+* TLSv1.3 (OUT), TLS alert, close notify (256):
+curl: (91) SSL certificate revocation reason: (UNKNOWN) (-1)
 ```
