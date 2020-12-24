@@ -139,8 +139,11 @@ $ openssl x509 -in certs/certserver.crt -noout -text
 
 1. Download envoy
 
+** NOTE ** we are using the `envoy 1.17.0`
 ```
-docker cp `docker create envoyproxy/envoy:v1.16-dev`:/usr/local/bin/envoy .
+docker cp `docker create envoyproxy/envoy-dev:latest`:/usr/local/bin/envoy .
+
+./envoy  version: 483dd3007f15e47deed0a29d945ff776abb37815/1.17.0-dev/Clean/RELEASE/BoringSSL
 ```
 
 2. Run envoy_server
@@ -306,7 +309,7 @@ $ openssl s_server \
   -status_file http_server_ocsp_resp_valid.bin \
   -cert http_server.crt -key http_server.key \
   -port 8081 -CAfile tls-ca-ocsp-chain.pem \
-  -verify_return_error -verify 1
+  -verify_return_error -Verify 1
 
 $ openssl s_client \
   -connect localhost:8081 \
