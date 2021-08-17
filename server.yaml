@@ -48,21 +48,21 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
           require_client_certificate: true
-          ocsp_staple_policy: MUST_STAPLE
+          # ocsp_staple_policy: MUST_STAPLE
           common_tls_context:
             tls_certificates:
             - certificate_chain:
                 filename: certs/http_server.crt
               private_key:
                 filename: certs/http_server.key
-              ocsp_staple:
-                filename: certs/http_server_ocsp_resp_valid.bin
-                #filename: certs/http_server_ocsp_resp_revoked.bin
+              # ocsp_staple:
+              #   filename: certs/http_server_ocsp_resp_valid.bin
+                # filename: certs/http_server_ocsp_resp_revoked.bin
             validation_context:
               trusted_ca:
                 filename: certs/tls-ca-chain.pem
-              # crl:
-              #   filename: certs/tls-ca.crl
+              crl:
+                filename: certs/tls-ca.crl
               verify_certificate_spki:
               - "jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI="                
 
@@ -93,6 +93,13 @@ static_resources:
               socket_address:
                 address: 127.0.0.1
                 port_value: 18080
+    health_checks:
+      - timeout: 1s
+        interval: 2s
+        unhealthy_threshold: 3
+        healthy_threshold: 1
+        http_health_check:
+          path: /healthcheck                
     transport_socket:
       name: envoy.transport_sockets.tls
       typed_config:

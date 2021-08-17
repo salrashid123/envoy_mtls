@@ -12,7 +12,7 @@ Sample demonstrates:
 
 
 ```bash
-                     envoy (auth_api_cluster)
+                (auth_api_cluster)
                        ^
                        |
                      (TLS)
@@ -113,10 +113,10 @@ Note the SAN value as well as the serial number (`13 (0D)`) which will be used f
 Also, we will generate the digest value (we will use this later to indicate valid certificates:
 
 ```bash
-$ openssl x509 -in client.crt -outform DER | openssl dgst -sha256 | cut -d" " -f2
+$ openssl x509 -in certs/client.crt -outform DER | openssl dgst -sha256 | cut -d" " -f2
   492d412c90b7d1747f02583d03dbf52e009fde113dd454bd5de572bde6595efc
 
-$ openssl x509 -in client.crt -noout -pubkey  | openssl pkey -pubin -outform DER  | openssl dgst -sha256 -binary  | openssl enc -base64
+$ openssl x509 -in certs/client.crt -noout -pubkey  | openssl pkey -pubin -outform DER  | openssl dgst -sha256 -binary  | openssl enc -base64
   jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI=
 ```
 
@@ -149,28 +149,50 @@ docker cp `docker create envoyproxy/envoy-dev:latest`:/usr/local/bin/envoy .
 2. Run envoy_server
 
 ```
-./envoy -c server.yaml --base-id 0 -l debug
+./envoy -c server.yaml -l debug
 ```
 
 3. Run certificate service
 
 ```bash
-./envoy -c certsvc.yaml --base-id 1 -l debug
+go run src/server/main.go
 ```
 
 4. Access envoy server
 
 Now that each component is running use curl to access the envoy server
 
+Update `8/17/21`:
+  The curl version >7.74 does not work anymore :( after [https://curl.se/docs/CVE-2020-8286.html](https://curl.se/docs/CVE-2020-8286.html).
+
+  TBH, i think there is an issue with that fix itself [here](https://github.com/curl/curl/blob/e8cd39345e98cb543a07985effa365bb2ac1a1c1/lib/vtls/openssl.c#L1936-L1949)where it it does not check if the OCSP stapled response was signed by some dedicate CA even if its in the chain.
+
+
 ```bash
+# $ curl --version
+  # curl 7.74.0 (OpenSSL/1.1.1k zlib/1.2.11 
+
 curl -v -H "host: http.domain.com"  \
    --resolve  http.domain.com:8081:127.0.0.1 \
    --cert certs/client.crt \
    --key certs/client.key  \
-   --cacert certs/tls-ca-chain.pem \
+   --cacert certs/tls-ca-ocsp-chain.pem \
    --cert-status \
      https://http.domain.com:8081/get
+# gives the error: curl: (91) Error computing OCSP ID
 ```
+
+so as a workaround,we use a lower version to test with:
+
+```bash
+docker run     --net=host  \
+    -v `pwd`/certs/:/certs curlimages/curl:7.73.0 -vvv \
+    -H "host: http.domain.com"  \
+    --resolve  http.domain.com:8081:127.0.0.1 \
+     --cert /certs/client.crt --key /certs/client.key \
+     --cacert /certs/tls-ca-chain.pem --cert-status  https://http.domain.com:8081/get
+```
+
 
 The client will establish a mTLS with envoy_server.
 Envoy Server will validate the presented client certificate against a list of approved CAs.
@@ -218,8 +240,8 @@ This is the configuration for the downstream connection (i.,e client->envoy_serv
 - `envoy.filters.network.client_ssl_auth`:  this setting is a network filter to validate the certificate.
    The envoy_server will invoke a REST URL on a designate cluster for the list of acceptable certificate hash.  That is
 
-```json
-$ curl -s localhost:18080/v1/certs/list/approved | jq '.'
+```bash
+$ curl -sk https://localhost:18080/v1/certs/list/approved | jq '.'
 {
   "certificates": [
     {
@@ -229,24 +251,56 @@ $ curl -s localhost:18080/v1/certs/list/approved | jq '.'
 }
 ```
 ```
-$ openssl x509 -in client.crt -outform DER | openssl dgst -sha256 | cut -d" " -f2
+$ openssl x509 -in certs/client.crt -outform DER | openssl dgst -sha256 | cut -d" " -f2
   492d412c90b7d1747f02583d03dbf52e009fde113dd454bd5de572bde6595efc
 ```
 
 - `verify_certificate_spki`: this setting performs a static validation of the provided certificate
 ```
-$ openssl x509 -in client.crt -noout -pubkey  | openssl pkey -pubin -outform DER  | openssl dgst -sha256 -binary  | openssl enc -base64
+$ openssl x509 -in certs/client.crt -noout -pubkey  | openssl pkey -pubin -outform DER  | openssl dgst -sha256 -binary  | openssl enc -base64
   jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI=
 ```
 
 #### CRL
 
-If you want to see the details of the CRL, run the following.
+The CRL test here is enabled by setting in `server.yaml` the  following bits:
+
+```yaml
+      transport_socket:
+        name: envoy.transport_sockets.tls
+        typed_config:
+          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+          require_client_certificate: true
+          common_tls_context:
+            tls_certificates:
+            - certificate_chain:
+                filename: certs/http_server.crt
+              private_key:
+                filename: certs/http_server.key
+            validation_context:
+              trusted_ca:
+                filename: certs/tls-ca-chain.pem
+              crl:
+                filename: certs/tls-ca.crl
+              verify_certificate_spki:
+              - "jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI="    
+```
+
+The CRL here has the client certificate in revoked status
+
+The serial number for `certs/client.crt` is:
+
+```
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 13 (0xd)
+```
 
 Note the `Revoked Certificates` list where the serial number is listed
 
 ```bash
-$ openssl crl -inform PEM -text -noout -in tls-ca.crl 
+$ openssl crl -inform PEM -text -noout -in certs/tls-ca.crl 
       Certificate Revocation List (CRL):
               Version 2 (0x1)
               Signature Algorithm: sha1WithRSAEncryption
@@ -265,8 +319,8 @@ $ openssl crl -inform PEM -text -noout -in tls-ca.crl
       Revoked Certificates:
           Serial Number: 01
               Revocation Date: Apr 26 00:31:18 2020 GMT
-          Serial Number: 0D
-              Revocation Date: Dec 12 14:11:52 2020 GMT
+          Serial Number: 0D                               <<<<<<<<<<<<<<<  0xd = 13
+              Revocation Date: Dec 12 14:11:52 2020 GMT   <<<<<<<<<<<<<<<
 ```
 
 If you uncomment the section where the CRL is validated, and you invoke the client, you will see an SSL response indicating expired cert
@@ -331,12 +385,13 @@ on `server.yaml`, set
 restart and run curl with `--cert-status` flag or via openssl to just view the OCSP stapled response
 
 ```bash
-$ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.0.1  \
-    --cert certs/client.crt  \
-    --key certs/client.key  \
-    --cacert certs/tls-ca-chain.pem \
-    --cert-status \
-       https://http.domain.com:8081/get
+
+docker run     --net=host  \
+    -v `pwd`/certs/:/certs curlimages/curl:7.73.0 -vvv \
+    -H "host: http.domain.com"  \
+    --resolve  http.domain.com:8081:127.0.0.1 \
+     --cert /certs/client.crt --key /certs/client.key \
+     --cacert /certs/tls-ca-chain.pem --cert-status  https://http.domain.com:8081/get
 
 
 * Added http.domain.com:8081:127.0.0.1 to DNS cache
@@ -401,11 +456,14 @@ on `server.yaml`,
                 filename: certs/http_server_ocsp_resp_revoked.bin
 ```
 
+```bash
+docker run     --net=host  \
+    -v `pwd`/certs/:/certs curlimages/curl:7.73.0 -vvv \
+    -H "host: http.domain.com"  \
+    --resolve  http.domain.com:8081:127.0.0.1 \
+     --cert /certs/client.crt --key /certs/client.key \
+     --cacert /certs/tls-ca-chain.pem --cert-status  https://http.domain.com:8081/get
 ```
-$ curl -vvvvv -H "host: http.domain.com"  --resolve  http.domain.com:8081:127.0.0.1    \
-    --cert certs/client.crt      --key certs/client.key   \
-    --cacert certs/tls-ca-chain.pem     --cert-status   https://http.domain.com:8081/get
-
 
 * Added http.domain.com:8081:127.0.0.1 to DNS cache
 * Hostname http.domain.com was found in DNS cache
