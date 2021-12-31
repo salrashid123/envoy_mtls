@@ -53,12 +53,6 @@ docker cp `docker create envoyproxy/envoy-dev:latest`:/usr/local/bin/envoy .
 Each scenario has its own `yaml` file with just the components required.  Run the appropriate version to test with
 
 
-3. Run certificate service
-
-```bash
-go run src/server/main.go
-```
-
 ---
 
 Note about `curl`:
@@ -202,7 +196,7 @@ A couple of things to note:
 
 - `only_verify_leaf_cert_crl: true`
   This checks the CRL for any CA thats part of chain.  In our case, we have a parent CA and a subordinate CA.  
-  However, i have not been able to verify the full crl chain (i.,e make it work if its set to `false`)...this is a TODO
+  However, i have not been able to verify the full crl chain (i.,e make it work if its set to `false`)...this is a TODO.  If you do not specify a crl, you don't need to set this
 
 
 ### 1b. CRL revoke client certificate
