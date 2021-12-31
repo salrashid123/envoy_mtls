@@ -31,6 +31,7 @@ func gethandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func hchandler(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("healthcheck called\n")
 	fmt.Fprint(w, "ok")
 }
 
