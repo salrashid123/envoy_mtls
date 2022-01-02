@@ -4,7 +4,7 @@ Sample configuration for HTTP and Network mTLS using envoy yaml
 
 Sample demonstrates two types of mtls validation for the Downstream client (`client` -> `envoy_server`)
 
-##### envoy.transport_sockets.tls
+#### envoy.transport_sockets.tls
 
 
 ```bash
