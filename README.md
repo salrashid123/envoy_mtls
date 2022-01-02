@@ -2,20 +2,18 @@
 
 Sample configuration for HTTP and Network mTLS using envoy yaml
 
-Sample demonstrates:
+Sample demonstrates two types of mtls validation for the Downstream client (`client` -> `envoy_server`)
 
-  * 1. Basic:  `client` -> `envoy_server` over mTLS, envoy checks local CRL and validates mTLS connection
+##### envoy.transport_sockets.tls
+
 
 ```bash
 client ->  (mTLS) -> envoy  -> (TLS) -> upstream                       
 ```
 
-This will use 
- `envoy.transport_sockets.tls`
-  `type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext`
+#### envoy.filters.network.client_ssl_auth
 
-
-  * 2. Basic: `client` -> `envoy_server` over mTLS, verify certificate though external serivce
+This will validate `client` -> `envoy_server` over mTLS, using an external service as the source for valid certificate hashes.
 
 ```bash
                 (auth_api_cluster)
@@ -27,9 +25,7 @@ This will use
 client ->  (mTLS) -> envoy  -> (TLS) -> upstream                       
 ```
 
-This will use `envoy.filters.network.client_ssl_auth`
-
-[extensions.filters.network.client_ssl_auth.v3.ClientSSLAuth](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/client_ssl_auth/v3/client_ssl_auth.proto#extensions-filters-network-client-ssl-auth-v3-clientsslauth)
+See:  [extensions.filters.network.client_ssl_auth.v3.ClientSSLAuth](https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/network/client_ssl_auth/v3/client_ssl_auth.proto#extensions-filters-network-client-ssl-auth-v3-clientsslauth)
 
 
 TBH...i'm not sure why you'd use `client_ssl_auth` versions since the external REST server it calls to validate a cert MUST send back ALL valid certificates....this is just poor.
@@ -88,7 +84,7 @@ docker run     --net=host  \
 ```
 
 
-### 1a. Basic (envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext)
+### 1a.  envoy.transport_sockets.tls
 
 * The client will establish a mTLS with envoy_server.
 * Envoy Server will validate the presented client certificate against a list of approved CAs.
@@ -311,7 +307,7 @@ so the configuration is
               - "jAKNnM50a5COFYrdrpWqTSiRP38Lr7GzyDnPWNe39DI=" 
 ```
 
-### Basic (`envoy.filters.network.client_ssl_auth`)
+### envoy.filters.network.client_ssl_auth
 
 In this section we will use the network TLS filter  `envoy.filters.network.client_ssl_auth`
 
@@ -486,6 +482,7 @@ static_resources:
 ---
 
 Thats about it...dont' use `envoy.extensions.filters.network.client_ssl_auth.v3.ClientSSLAuth`  for mtls
+
 ---
 
 ##### Background
