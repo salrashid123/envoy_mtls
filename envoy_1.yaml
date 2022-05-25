@@ -30,6 +30,8 @@ static_resources:
                 value: "%DOWNSTREAM_PEER_FINGERPRINT_256%"
           http_filters:
           - name: envoy.filters.http.router
+            typed_config:
+              "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
       transport_socket:
         name: envoy.transport_sockets.tls
         typed_config:
@@ -43,12 +45,18 @@ static_resources:
                 filename: certs/http_server.key
               ocsp_staple:
                 filename: certs/http_server_ocsp_resp_valid.bin
+                # filename: certs/http_server_ocsp_resp_revoked.bin                
             validation_context:
               only_verify_leaf_cert_crl: true
               trusted_ca:
                 filename: certs/tls-ca-chain.pem                
               crl:
                 filename: certs/tls-ca-valid.crl
+                # filename: certs/tls-ca-revoked.crl                
+            # validation_context:             
+            #   verify_certificate_spki:
+            #   - "0FDpHG3vRLuRng8gkBA9UB0pbr3MUQ48EA16LqjsEzY=" 
+
   clusters:
   - name: service_httpbin
     connect_timeout: 0.25s

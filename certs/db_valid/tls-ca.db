@@ -1,0 +1,4 @@
+V	270218114211Z		01	unknown	/C=US/O=Google/OU=Enterprise/CN=ocsp.domain.com
+V	270218114301Z		02	unknown	/C=US/O=Google/OU=Enterprise/CN=http.domain.com
+V	270218114342Z		03	unknown	/C=US/O=Google/OU=Enterprise/CN=certserver.domain.com
+V	270218114441Z		04	unknown	/C=US/O=Google/OU=Enterprise/CN=client@domain.com

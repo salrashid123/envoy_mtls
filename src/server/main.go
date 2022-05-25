@@ -17,7 +17,7 @@ const (
 	staticResponse = `{
 		"certificates": [
 		  {
-			"fingerprint_sha256": "492d412c90b7d1747f02583d03dbf52e009fde113dd454bd5de572bde6595efc"
+			"fingerprint_sha256": "f1e93b2401a998ae419bdcb150c3b23e962d3d7faff9d744c99d9d18678a239e"
 		  }
 		]
 	  }
