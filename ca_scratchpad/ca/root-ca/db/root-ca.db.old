@@ -1,0 +1,5 @@
+V	341116135213Z		01	unknown	/C=US/O=Google/OU=Enterprise/CN=Single Root CA
+V	341116135533Z		02	unknown	/C=US/O=Google/OU=Enterprise/CN=http.domain.com
+V	341116135650Z		03	unknown	/L=US/O=Google/OU=Enterprise/CN=client.domain.com
+V	341116140948Z		04	unknown	/L=US/O=Google/OU=Enterprise/CN=ocsp.domain.com
+V	341116141211Z		05	unknown	/C=US/O=Google/OU=Enterprise/CN=certserver.domain.com

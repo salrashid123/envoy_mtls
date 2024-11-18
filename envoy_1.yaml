@@ -7,6 +7,10 @@ static_resources:
   - name: listener_0
     address:
       socket_address: { address: 0.0.0.0, port_value: 8081 }
+    listener_filters:
+    - name: envoy.filters.listener.tls_inspector
+      typed_config:
+        "@type": type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
     filter_chains:
     - filters:
       - name: envoy.filters.network.http_connection_manager
@@ -37,25 +41,26 @@ static_resources:
         typed_config:
           "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
           require_client_certificate: true
+          ocsp_staple_policy: MUST_STAPLE
           common_tls_context:
             tls_certificates:
             - certificate_chain:
-                filename: certs/http_server.crt
+                filename: ca_scratchpad/certs/root-ca-http-chain.pem
               private_key:
-                filename: certs/http_server.key
+                filename: ca_scratchpad/certs/http.key
               ocsp_staple:
-                filename: certs/http_server_ocsp_resp_valid.bin
-                # filename: certs/http_server_ocsp_resp_revoked.bin                
+                filename: ca_scratchpad/http_server_ocsp_resp_valid.bin
+                #filename: ca_scratchpad/http_server_ocsp_resp_revoked.bin                
             validation_context:
               only_verify_leaf_cert_crl: true
               trusted_ca:
-                filename: certs/tls-ca-chain.pem                
+                filename: ca_scratchpad/ca/root-ca.crt                
               crl:
-                filename: certs/tls-ca-valid.crl
-                # filename: certs/tls-ca-revoked.crl                
+                filename: ca_scratchpad/crl/root-ca-empty-valid.crl
+                #filename: ca_scratchpad/crl/root-ca-client-revoked.crl  
             # validation_context:             
             #   verify_certificate_spki:
-            #   - "0FDpHG3vRLuRng8gkBA9UB0pbr3MUQ48EA16LqjsEzY=" 
+            #   - "cWIfhFZ43yuEywHiWwj/tkx47eArjt6IQrmlHngqi8g=" 
 
   clusters:
   - name: service_httpbin

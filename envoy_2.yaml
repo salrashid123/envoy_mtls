@@ -46,15 +46,15 @@ static_resources:
           common_tls_context:
             tls_certificates:
             - certificate_chain:
-                filename: certs/http_server.crt
+                filename: ca_scratchpad/certs/root-ca-http-chain.pem
               private_key:
-                filename: certs/http_server.key
+                filename: ca_scratchpad/certs/http.key
               ocsp_staple:
-                filename: certs/http_server_ocsp_resp_valid.bin
+                filename: ca_scratchpad/http_server_ocsp_resp_valid.bin
             validation_context:
               only_verify_leaf_cert_crl: true
               trusted_ca:
-                filename: certs/tls-ca-chain.pem                
+                filename: ca_scratchpad/ca/root-ca.crt             
   clusters:
   - name: service_httpbin
     connect_timeout: 0.25s
@@ -102,4 +102,4 @@ static_resources:
             match_subject_alt_names:
               exact: "certserver.domain.com"
             trusted_ca:
-              filename: "certs/tls-ca-chain.pem"
+              filename: ca_scratchpad/ca/root-ca.crt  
